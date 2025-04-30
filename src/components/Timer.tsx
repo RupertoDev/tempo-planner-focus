@@ -31,11 +31,17 @@ const Timer: React.FC<TimerProps> = ({
   const [remainingTime, setRemainingTime] = useState(totalSeconds);
   const [lastTick, setLastTick] = useState<number | null>(null);
   
-  // Format time as MM:SS
+  // Format time as HH:MM:SS or MM:SS depending on duration
   const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
   };
 
   // Calculate progress percentage (inverted from previous)
