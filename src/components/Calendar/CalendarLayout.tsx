@@ -16,9 +16,10 @@ interface CalendarLayoutProps {
   selectedDate: Date;
   onDateChange: (date: Date) => void;
   onStartTask: (taskId: string) => void;
+  onDeleteTask: (taskId: string) => void;
 }
 
-const CalendarLayout = ({ tasks, selectedDate, onDateChange, onStartTask }: CalendarLayoutProps) => {
+const CalendarLayout = ({ tasks, selectedDate, onDateChange, onStartTask, onDeleteTask }: CalendarLayoutProps) => {
   const selectedDateTasks = tasks.filter(task => {
     const taskDate = new Date(task.scheduledTime);
     return taskDate.toDateString() === selectedDate.toDateString();
@@ -74,7 +75,7 @@ const CalendarLayout = ({ tasks, selectedDate, onDateChange, onStartTask }: Cale
         </CardHeader>
         <CardContent>
           {selectedDateTasks.length > 0 ? (
-            <TaskList tasks={selectedDateTasks} onStartTask={onStartTask} />
+            <TaskList tasks={selectedDateTasks} onStartTask={onStartTask} onDeleteTask={onDeleteTask} />
           ) : (
             <div className="text-center py-8">
               <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

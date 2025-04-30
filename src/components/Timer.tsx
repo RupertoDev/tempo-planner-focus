@@ -1,109 +1,143 @@
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Play, Pause, Timer as TimerIcon } from "lucide-react";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { CheckCircle, Pause, Play, Trash2 } from "lucide-react";
 
 interface TimerProps {
   taskId: string;
   title: string;
-  estimatedTime: number;
+  estimatedTime: number; // in minutes
   onTimeUpdate: (taskId: string, elapsedTime: number) => void;
   onComplete: (taskId: string) => void;
-  isActive?: boolean;
+  onDelete: (taskId: string) => void;
+  isActive: boolean;
 }
 
-const formatTime = (seconds: number): string => {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-
-  return [
-    hours > 0 ? String(hours).padStart(2, '0') : '',
-    String(minutes).padStart(2, '0'),
-    String(secs).padStart(2, '0')
-  ].filter(Boolean).join(':');
-};
-
-const Timer = ({ taskId, title, estimatedTime, onTimeUpdate, onComplete, isActive = false }: TimerProps) => {
-  const [isRunning, setIsRunning] = useState(false);
+const Timer: React.FC<TimerProps> = ({
+  taskId,
+  title,
+  estimatedTime,
+  onTimeUpdate,
+  onComplete,
+  onDelete,
+  isActive
+}) => {
+  const [isRunning, setIsRunning] = useState(isActive);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const estimatedTimeInSeconds = estimatedTime * 60;
-  
-  const toggleTimer = () => {
-    setIsRunning(prev => !prev);
+  const [lastTick, setLastTick] = useState<number | null>(null);
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
-  
-  // Handles timer completion
-  const completeTimer = useCallback(() => {
+
+  // Calculate progress percentage
+  const calculateProgress = (): number => {
+    const totalSeconds = estimatedTime * 60;
+    return Math.min((elapsedTime / totalSeconds) * 100, 100);
+  };
+
+  // Toggle timer
+  const toggleTimer = (): void => {
+    if (isRunning) {
+      setIsRunning(false);
+      setLastTick(null);
+    } else {
+      setIsRunning(true);
+      setLastTick(Date.now());
+    }
+  };
+
+  // Complete task
+  const completeTask = (): void => {
     setIsRunning(false);
     onComplete(taskId);
-    toast.success(`Tempo concluído: ${title}`);
-  }, [taskId, title, onComplete]);
+  };
 
-  // Manage timer interval
+  // Effect for timer
   useEffect(() => {
-    let intervalId: number | undefined;
-    
+    let intervalId: NodeJS.Timeout;
+
     if (isRunning) {
-      intervalId = window.setInterval(() => {
-        setElapsedTime(prev => {
-          const newTime = prev + 1;
-          onTimeUpdate(taskId, newTime);
-          return newTime;
-        });
+      intervalId = setInterval(() => {
+        const now = Date.now();
+        if (lastTick) {
+          const diff = Math.floor((now - lastTick) / 1000);
+          setElapsedTime((prev) => prev + diff);
+          onTimeUpdate(taskId, elapsedTime + diff);
+        }
+        setLastTick(now);
       }, 1000);
     }
-    
+
     return () => {
-      if (intervalId) clearInterval(intervalId);
+      clearInterval(intervalId);
     };
-  }, [isRunning, taskId, onTimeUpdate]);
-  
-  // Check if timer reached the estimated time
-  useEffect(() => {
-    if (elapsedTime >= estimatedTimeInSeconds) {
-      completeTimer();
-    }
-  }, [elapsedTime, estimatedTimeInSeconds, completeTimer]);
+  }, [isRunning, lastTick, taskId, elapsedTime, onTimeUpdate]);
 
   return (
-    <Card className={cn("task-card transition-all", isRunning && "ring-2 ring-primary")}>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-medium text-sm text-muted-foreground">
-              {isRunning ? "Em andamento" : "Tarefa"}
-            </h3>
-            <p className="font-semibold truncate max-w-[180px]">{title}</p>
-          </div>
-          
-          <div className="flex flex-col items-end">
-            <div className={cn("timer-display flex items-center gap-2", 
-              isRunning && "text-primary animate-pulse-light")}>
-              <TimerIcon className="h-4 w-4" />
-              <span>{formatTime(elapsedTime)}</span>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Estimado: {formatTime(estimatedTimeInSeconds)}
-            </div>
-          </div>
+    <Card className="w-full">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-medium">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="pb-2">
+        <div className="flex justify-between mb-2">
+          <span className="text-2xl font-bold">{formatTime(elapsedTime)}</span>
+          <span className="text-sm text-muted-foreground">
+            Meta: {formatTime(estimatedTime * 60)}
+          </span>
         </div>
+        <Progress value={calculateProgress()} className="h-2" />
+      </CardContent>
+      <CardFooter className="pt-1 flex justify-between">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm" className="text-destructive">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir tarefa</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir esta tarefa em andamento? Todo o progresso será perdido.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => onDelete(taskId)} 
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         
-        <div className="mt-3 flex justify-end">
-          <Button 
-            size="sm" 
-            variant={isRunning ? "secondary" : "default"}
-            onClick={toggleTimer} 
-            className="timer-button"
+        <div className="flex space-x-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={toggleTimer}
           >
             {isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            <span className="ml-2">{isRunning ? "Pausar" : "Iniciar"}</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="default"
+            onClick={completeTask}
+          >
+            <CheckCircle className="h-4 w-4 mr-1" />
+            Concluir
           </Button>
         </div>
-      </CardContent>
+      </CardFooter>
     </Card>
   );
 };

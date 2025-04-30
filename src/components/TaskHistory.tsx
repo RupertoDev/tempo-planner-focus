@@ -1,36 +1,37 @@
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Task } from "@/types";
-import { CheckCircle2 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Task } from '@/types';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Button } from './ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { Check, ChevronDown, ChevronUp, Clock, Trash2 } from 'lucide-react';
 
 interface TaskHistoryProps {
   tasks: Task[];
+  onDeleteTask: (taskId: string) => void;
 }
 
-const TaskHistory = ({ tasks }: TaskHistoryProps) => {
-  const [expanded, setExpanded] = useState(false);
+const TaskHistory = ({ tasks, onDeleteTask }: TaskHistoryProps) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   
-  // Filter completed tasks and sort by completion date (newest first)
+  // Filter completed tasks and sort by completion date (most recent first)
   const completedTasks = tasks
     .filter(task => task.status === 'completed')
     .sort((a, b) => {
-      // This is a simplification, assuming createdAt + actualTime represents completion time
+      // Using createdAt as a proxy for completedAt
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  
-  // Display only the most recent tasks unless expanded
-  const displayedTasks = expanded ? completedTasks : completedTasks.slice(0, 5);
   
   if (completedTasks.length === 0) {
     return null;
   }
-
-  // Format time for display
+  
+  // Display at most 3 tasks when collapsed
+  const displayedTasks = isExpanded ? completedTasks : completedTasks.slice(0, 3);
+  const hasMore = completedTasks.length > 3;
+  
   const formatTime = (minutes: number): string => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -41,48 +42,86 @@ const TaskHistory = ({ tasks }: TaskHistoryProps) => {
   };
 
   return (
-    <div className="space-y-4 mt-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Histórico de Tarefas</h2>
-        {completedTasks.length > 5 && (
-          <Button variant="ghost" onClick={() => setExpanded(!expanded)}>
-            {expanded ? "Mostrar Menos" : "Mostrar Mais"}
-          </Button>
-        )}
-      </div>
-      
-      <ScrollArea className={cn("rounded-md border", expanded ? "max-h-[400px]" : "max-h-[300px]")}>
-        <div className="p-4 space-y-3">
-          {displayedTasks.map(task => (
-            <div key={task.id} className="flex items-center space-x-4 p-3 bg-muted/50 rounded-md">
-              <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
-              
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium truncate">{task.title}</h3>
-                <p className="text-xs text-muted-foreground">
-                  Concluída em {format(new Date(task.createdAt), "dd 'de' MMMM", { locale: ptBR })}
-                </p>
-              </div>
-              
-              <div className="text-right">
-                <div className="text-sm font-medium">
-                  {formatTime(task.actualTime)}
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex justify-between items-center">
+          <span>Histórico de Tarefas</span>
+          <span className="text-sm font-normal text-muted-foreground">
+            {completedTasks.length} tarefas concluídas
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {displayedTasks.map((task) => (
+            <div
+              key={task.id}
+              className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-primary/10 p-1">
+                  <Check className="h-4 w-4 text-primary" />
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  Estimado: {formatTime(task.estimatedTime)}
+                <div>
+                  <h4 className="font-medium">{task.title}</h4>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="flex items-center text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {formatTime(task.actualTime)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(task.createdAt), "d 'de' MMMM", { locale: ptBR })}
+                    </span>
+                  </div>
                 </div>
               </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir do histórico</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tem certeza que deseja excluir "{task.title}" do histórico de tarefas? Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={() => onDeleteTask(task.id)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Excluir
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           ))}
           
-          {displayedTasks.length === 0 && (
-            <p className="text-center py-4 text-muted-foreground">
-              Nenhuma tarefa concluída
-            </p>
+          {hasMore && (
+            <Button
+              variant="ghost"
+              className="w-full text-sm text-muted-foreground"
+              onClick={() => setIsExpanded(!isExpanded)}
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="h-4 w-4 mr-2" /> Mostrar menos
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-4 w-4 mr-2" /> Mostrar mais ({completedTasks.length - 3} restantes)
+                </>
+              )}
+            </Button>
           )}
         </div>
-      </ScrollArea>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

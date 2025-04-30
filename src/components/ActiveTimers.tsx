@@ -6,9 +6,10 @@ interface ActiveTimersProps {
   tasks: Task[];
   onTimeUpdate: (taskId: string, elapsedTime: number) => void;
   onComplete: (taskId: string) => void;
+  onDelete: (taskId: string) => void;
 }
 
-const ActiveTimers = ({ tasks, onTimeUpdate, onComplete }: ActiveTimersProps) => {
+const ActiveTimers = ({ tasks, onTimeUpdate, onComplete, onDelete }: ActiveTimersProps) => {
   // Filter tasks that are in progress
   const activeTasks = tasks.filter(task => task.status === 'in-progress');
   
@@ -28,6 +29,7 @@ const ActiveTimers = ({ tasks, onTimeUpdate, onComplete }: ActiveTimersProps) =>
             estimatedTime={task.estimatedTime}
             onTimeUpdate={onTimeUpdate}
             onComplete={onComplete}
+            onDelete={onDelete}
             isActive={true}
           />
         ))}

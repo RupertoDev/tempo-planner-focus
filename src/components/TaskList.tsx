@@ -2,16 +2,18 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Task } from "@/types";
-import { Play } from "lucide-react";
+import { Play, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface TaskListProps {
   tasks: Task[];
   onStartTask: (taskId: string) => void;
+  onDeleteTask: (taskId: string) => void;
 }
 
-const TaskList = ({ tasks, onStartTask }: TaskListProps) => {
+const TaskList = ({ tasks, onStartTask, onDeleteTask }: TaskListProps) => {
   const formatEstimatedTime = (minutes: number): string => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -44,15 +46,42 @@ const TaskList = ({ tasks, onStartTask }: TaskListProps) => {
                 </div>
               </div>
               
-              <Button
-                size="sm"
-                onClick={() => onStartTask(task.id)}
-                className="timer-button"
-                disabled={task.status === 'completed'}
-              >
-                <Play className="h-4 w-4" />
-                <span className="ml-2">Iniciar</span>
-              </Button>
+              <div className="flex space-x-2">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir tarefa</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir a tarefa "{task.title}"? Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={() => onDeleteTask(task.id)} 
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                
+                <Button
+                  size="sm"
+                  onClick={() => onStartTask(task.id)}
+                  className="timer-button"
+                  disabled={task.status === 'completed'}
+                >
+                  <Play className="h-4 w-4" />
+                  <span className="ml-2">Iniciar</span>
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -72,6 +72,19 @@ const Index = () => {
     }
   };
   
+  // Delete a task
+  const handleDeleteTask = (taskId: string) => {
+    const taskToDelete = tasks.find(task => task.id === taskId);
+    
+    setTasks(prev => prev.filter(task => task.id !== taskId));
+    
+    if (taskToDelete) {
+      toast.success(`"${taskToDelete.title}" excluída!`, {
+        description: "Tarefa removida permanentemente",
+      });
+    }
+  };
+  
   // Count tasks in progress
   const activeTaskCount = tasks.filter(task => task.status === 'in-progress').length;
 
@@ -83,7 +96,8 @@ const Index = () => {
         <ActiveTimers 
           tasks={tasks} 
           onTimeUpdate={handleTimeUpdate} 
-          onComplete={handleCompleteTask} 
+          onComplete={handleCompleteTask}
+          onDelete={handleDeleteTask}
         />
         
         <CalendarLayout
@@ -91,9 +105,13 @@ const Index = () => {
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
           onStartTask={handleStartTask}
+          onDeleteTask={handleDeleteTask}
         />
         
-        <TaskHistory tasks={tasks} />
+        <TaskHistory 
+          tasks={tasks} 
+          onDeleteTask={handleDeleteTask}
+        />
       </main>
     </div>
   );
