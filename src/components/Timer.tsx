@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { CheckCircle, Pause, Play, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface TimerProps {
   taskId: string;
@@ -25,10 +26,11 @@ const Timer: React.FC<TimerProps> = ({
   onDelete,
   isActive
 }) => {
+  const totalSeconds = estimatedTime * 60;
   const [isRunning, setIsRunning] = useState(isActive);
-  const [elapsedTime, setElapsedTime] = useState(0);
+  const [remainingTime, setRemainingTime] = useState(totalSeconds);
   const [lastTick, setLastTick] = useState<number | null>(null);
-
+  
   // Format time as MM:SS
   const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
@@ -36,10 +38,9 @@ const Timer: React.FC<TimerProps> = ({
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  // Calculate progress percentage
+  // Calculate progress percentage (inverted from previous)
   const calculateProgress = (): number => {
-    const totalSeconds = estimatedTime * 60;
-    return Math.min((elapsedTime / totalSeconds) * 100, 100);
+    return Math.max(100 - ((remainingTime / totalSeconds) * 100), 0);
   };
 
   // Toggle timer
@@ -68,8 +69,20 @@ const Timer: React.FC<TimerProps> = ({
         const now = Date.now();
         if (lastTick) {
           const diff = Math.floor((now - lastTick) / 1000);
-          setElapsedTime((prev) => prev + diff);
-          onTimeUpdate(taskId, elapsedTime + diff);
+          const newRemainingTime = Math.max(0, remainingTime - diff);
+          setRemainingTime(newRemainingTime);
+          
+          // Calculate elapsed time
+          const elapsedTime = totalSeconds - newRemainingTime;
+          onTimeUpdate(taskId, elapsedTime);
+          
+          // Check if timer reached zero
+          if (newRemainingTime === 0) {
+            setIsRunning(false);
+            toast.info("Tempo estimado atingido!", {
+              description: `A tarefa "${title}" atingiu o tempo estimado`
+            });
+          }
         }
         setLastTick(now);
       }, 1000);
@@ -78,7 +91,7 @@ const Timer: React.FC<TimerProps> = ({
     return () => {
       clearInterval(intervalId);
     };
-  }, [isRunning, lastTick, taskId, elapsedTime, onTimeUpdate]);
+  }, [isRunning, lastTick, taskId, remainingTime, onTimeUpdate, totalSeconds, title]);
 
   return (
     <Card className="w-full">
@@ -87,9 +100,9 @@ const Timer: React.FC<TimerProps> = ({
       </CardHeader>
       <CardContent className="pb-2">
         <div className="flex justify-between mb-2">
-          <span className="text-2xl font-bold">{formatTime(elapsedTime)}</span>
+          <span className="text-2xl font-bold">{formatTime(remainingTime)}</span>
           <span className="text-sm text-muted-foreground">
-            Meta: {formatTime(estimatedTime * 60)}
+            Meta: {formatTime(totalSeconds)}
           </span>
         </div>
         <Progress value={calculateProgress()} className="h-2" />
