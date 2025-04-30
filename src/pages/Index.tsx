@@ -6,7 +6,6 @@ import CalendarLayout from "@/components/Calendar/CalendarLayout";
 import ActiveTimers from "@/components/ActiveTimers";
 import TaskHistory from "@/components/TaskHistory";
 import { toast } from "sonner";
-import { v4 as uuidv4 } from "uuid";
 
 const Index = () => {
   const [tasks, setTasks] = useState<Task[]>(() => {
